@@ -5,21 +5,55 @@ output:
     keep_md: true
 ---
 
-
+library(lattice)
 ## Loading and preprocessing the data
-
-
+actdata <- read.csv("activity.csv")
+actdata$date <- as.Date(actdata$date,"%Y-%m-%d")
 
 ## What is mean total number of steps taken per day?
-
+totsteps <- tapply(actdata$steps, actdata$date,sum)
+hist(totsteps,col="blue",xlab="Total Steps per Day",ylab="Frequency", main="Histogram of Total Steps taken per day")
+mean(totsteps,na.rm=TRUE)
 
 
 ## What is the average daily activity pattern?
-
-
+meansteps <- tapply(actdata$steps,actdata$interval,mean,na.rm=TRUE)
+plot(row.names(meansteps),meansteps,type="l",
+     xlab="Time Intervals (5-minute)", 
+     ylab="Mean number of steps taken (all Days)", 
+     main="Average Steps Taken at 5 minute Intervals",
+     col="blue")
+     
+interval_num <- which.max(meansteps)
+interval_max_steps <- names(interval_num)
+interval_max_steps
 
 ## Imputing missing values
-
+num_na_values <- sum(is.na(actdata))
+num_na_values 
+na_indices <-  which(is.na(actdata))
+imputed_values <- meansteps[as.character(actdata[na_indices,3])]
+names(imputed_values) <- na_indices
+for (i in na_indices) {
+    actdata$steps[i] = imputed_values[as.character(i)]
+}
+sum(is.na(actdata)) 
+totsteps <- tapply(actdata$steps, actdata$date,sum)
+hist(totsteps,col="red",xlab="Total Steps per Day", 
+      ylab="Frequency", main="Histogram of Total Steps taken per day")
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+days <- weekdays(actdata$date)
+actdata$day_type <- ifelse(days == "Saturday" | days == "Sunday", 
+                                "Weekend", "Weekday")
+meansteps <- aggregate(actdata$steps,
+                                    by=list(actdata$interval,
+                                            actdata$day_type),mean)
+names(meansteps) <- c("interval","day_type","steps")
+xyplot(steps~interval | day_type, meansteps,type="l",
+       layout=c(1,2),xlab="Interval",ylab = "Number of steps")
+       
+       tapply(meansteps$steps,meansteps$day_type,
+       function (x) { c(MINIMUM=min(x),MEAN=mean(x),
+                        MEDIAN=median(x),MAXIMUM=max(x))})
